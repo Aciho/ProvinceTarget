@@ -1,0 +1,83 @@
+﻿@functions{
+    private static string WargamingAPI = 
+"https://api.worldoftanks.eu/wot/globalwar/provinces/?application_id=a1dfd7ca8e1527cfbcd2d2cae3c21072&map_id=2";
+
+    public class ProvinceList
+    {
+        public string status;
+        public int count;
+        public Dictionary<string, Province> data;
+    }
+    
+    public class Province
+    {
+        public string status { get; set; }
+        public List<string> neighbors { get; set; }
+        public string province_i18n { get; set; }
+        public int revenue { get; set; }
+        public int vehicle_max_level { get; set; }
+        public string arena { get; set; }
+        public Dictionary<string, Region> regions { get; set; }
+        public int? clan_id { get; set; }
+        public string primary_region { get; set; }
+        public string province_id { get; set; }
+        public int prime_time { get; set; }
+    }
+
+    public class Region
+    {
+        public string region_i18n { get; set; }
+        public string region_id { get; set; }
+    }
+
+    public static ProvinceList GetProvinceList()
+    {
+        System.Net.WebClient webClient = new System.Net.WebClient();
+        var jsonText = webClient.DownloadString(WargamingAPI);
+
+        return Json.Decode<ProvinceList>(jsonText);
+    }
+
+}
+
+@{
+    ProvinceList provinceList = GetProvinceList();
+    Province province = provinceList.data.Values.FirstOrDefault();
+
+    int count = 0;
+
+    if (IsPost)
+    {
+        count++;
+    }
+}
+
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Province Target</title>
+        <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+    </head>
+    <body>
+
+        <form method="post">
+            <div>
+                <select name="starttime">
+                    <option value="volvo">Volvo</option>
+                    <option value="saab">Saab</option>
+                    <option value="fiat">Fiat</option>
+                    <option value="audi">Audi</option>
+                </select>
+                <p><input type="submit" value="Submit" /></p>
+            </div>
+        </form>
+
+        <ol>
+            <li>Name: @province.province_i18n</li>
+        </ol>
+
+        @count
+    </body>
+</html>
