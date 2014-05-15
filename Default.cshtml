@@ -1,12 +1,15 @@
 ﻿@functions{
-    private static string WargamingAPI = 
+    private static string WargamingAPIGetMaps = 
 "https://api.worldoftanks.eu/wot/globalwar/provinces/?application_id=a1dfd7ca8e1527cfbcd2d2cae3c21072&map_id=2";
+
+    private static string WargamingAPIGetClans = 
+"https://api.worldoftanks.eu/wot/clan/info/?application_id=a1dfd7ca8e1527cfbcd2d2cae3c21072&fields=abbreviation,clan_id,color,name&clan_id=";
 
     public class ProvinceList
     {
         public string status;
         public int count;
-        public Dictionary<string, Province> data;
+        public Dictionary<string, Province> data = new Dictionary<string, Province>();
     }
     
     public class Province
@@ -19,6 +22,7 @@
         public string arena { get; set; }
         public Dictionary<string, Region> regions { get; set; }
         public int? clan_id { get; set; }
+        public Clan clan { get; set; }
         public string primary_region { get; set; }
         public string province_id { get; set; }
         public int prime_time { get; set; }
@@ -30,14 +34,32 @@
         public string region_id { get; set; }
     }
 
+    public class ClanList
+    {
+        public string status;
+        public int count;
+        public Dictionary<string, Clan> data = new Dictionary<string, Clan>();
+    }
+
+    public class Clan
+    {
+        public string color { get; set; }
+        public string abbreviation { get; set; }
+        public int clan_id { get; set; }
+        public string name { get; set; }
+    }
+
+    string jsonText = "";
+
     public ProvinceList GetProvinceList()
     {
         System.Net.WebClient webClient = new System.Net.WebClient();
-        var jsonText = webClient.DownloadString(WargamingAPI);
+        jsonText = webClient.DownloadString(WargamingAPIGetMaps);
 
         var list = Json.Decode<ProvinceList>(jsonText);
         ProvinceList newList = new ProvinceList();
-        newList.data = new Dictionary<string, Province>();
+
+        var clanIDs = new HashSet<int>();
 
         foreach(var province in list.data)
         {
@@ -45,11 +67,28 @@
            if (!Request.QueryString["starttime"].IsEmpty() && province.Value.prime_time < Request.QueryString["starttime"].AsInt()) {continue;}
            if (!Request.QueryString["provinceStatus"].IsEmpty() && !Request.QueryString["provinceStatus"].Split(',').Contains(province.Value.status)) {continue;}
 
-
-
            province.Value.arena = GetMapName(province.Value.arena);
+           
+           if (province.Value.clan_id.HasValue && clanIDs.Count < 100)
+           {
+                clanIDs.Add(province.Value.clan_id.Value);
+           }
 
            newList.data.Add(province.Key, province.Value);
+        }
+
+        string clanIDList = string.Join<int>(",", clanIDs);
+
+        jsonText = webClient.DownloadString(WargamingAPIGetClans + clanIDList);
+
+        ClanList clanList = Json.Decode<ClanList>(jsonText);
+
+        foreach( var province in newList.data.Values)
+        {
+            if (province.clan_id.HasValue && clanList.data.ContainsKey(province.clan_id.Value.ToString()))
+            {
+                province.clan = clanList.data[province.clan_id.Value.ToString()];
+            }
         }
 
         return newList;
@@ -57,7 +96,11 @@
 
     public static string GetMapName(string serverName)
     {
-        return "";
+        switch (serverName)
+        {
+            default:
+                return serverName;
+        }
     }
 
     public static Dictionary<int, string> GetClanNames(ProvinceList provinces)
@@ -73,7 +116,15 @@
 }
 
 @{
-    ProvinceList provinceList = GetProvinceList();
+    ProvinceList provinceList;
+    if (Request.QueryString.Count > 0)
+    {
+       provinceList = GetProvinceList();
+    }
+    else
+    {
+        provinceList = new ProvinceList();
+    }
 
     int count = 0;
 
@@ -144,7 +195,7 @@
                       <td>@province.prime_time</td>
                       <td>@province.vehicle_max_level</td>
                       <td>@province.revenue</td>
-                      <td><a href="http://wotcs.com/clan.php?wid=@province.clan_id">click</a></td>
+                      <td style="color: @province.clan.color"><a href="http://wotcs.com/clan.php?wid=@province.clan_id">@province.clan.abbreviation</a></td>
                       <td>@province.status</td>
                     </tr>
                     }
