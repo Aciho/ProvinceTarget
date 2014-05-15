@@ -47,16 +47,25 @@
         public string abbreviation { get; set; }
         public int clan_id { get; set; }
         public string name { get; set; }
+
+        public Clan()
+        {
+            color = "#000000";
+            abbreviation = "NPC";
+            clan_id = 0;
+            name = "Civilian";
+        }
     }
 
-    string jsonText = "";
+    string jsonText1 = "";
+    string jsonText2 = "";
 
     public ProvinceList GetProvinceList()
     {
         System.Net.WebClient webClient = new System.Net.WebClient();
-        jsonText = webClient.DownloadString(WargamingAPIGetMaps);
+        jsonText1 = webClient.DownloadString(WargamingAPIGetMaps);
 
-        var list = Json.Decode<ProvinceList>(jsonText);
+        var list = Json.Decode<ProvinceList>(jsonText1);
         ProvinceList newList = new ProvinceList();
 
         var clanIDs = new HashSet<int>();
@@ -79,15 +88,19 @@
 
         string clanIDList = string.Join<int>(",", clanIDs);
 
-        jsonText = webClient.DownloadString(WargamingAPIGetClans + clanIDList);
+        jsonText2 = webClient.DownloadString(WargamingAPIGetClans + clanIDList);
 
-        ClanList clanList = Json.Decode<ClanList>(jsonText);
+        ClanList clanList = Json.Decode<ClanList>(jsonText2);
 
         foreach( var province in newList.data.Values)
         {
             if (province.clan_id.HasValue && clanList.data.ContainsKey(province.clan_id.Value.ToString()))
             {
                 province.clan = clanList.data[province.clan_id.Value.ToString()];
+            }
+            else
+            {
+                province.clan = new Clan();
             }
         }
 
@@ -195,7 +208,14 @@
                       <td>@province.prime_time</td>
                       <td>@province.vehicle_max_level</td>
                       <td>@province.revenue</td>
-                      <td style="color: @province.clan.color"><a href="http://wotcs.com/clan.php?wid=@province.clan_id" target="_blank">@province.clan.abbreviation</a></td>
+                        @if (province.clan_id == null)
+                        {
+                            <td style="color: @province.clan.color">@province.clan.abbreviation</td>
+                        }
+                        else
+                        {
+                            <td><a href="http://wotcs.com/clan.php?wid=@province.clan_id" target="_blank" style="color: @province.clan.color">@province.clan.abbreviation</a></td>
+                        }
                       <td>@province.status</td>
                     </tr>
                     }
