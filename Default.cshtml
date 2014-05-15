@@ -30,19 +30,50 @@
         public string region_id { get; set; }
     }
 
-    public static ProvinceList GetProvinceList()
+    public ProvinceList GetProvinceList()
     {
         System.Net.WebClient webClient = new System.Net.WebClient();
         var jsonText = webClient.DownloadString(WargamingAPI);
 
-        return Json.Decode<ProvinceList>(jsonText);
+        var list = Json.Decode<ProvinceList>(jsonText);
+        ProvinceList newList = new ProvinceList();
+        newList.data = new Dictionary<string, Province>();
+
+        foreach(var province in list.data)
+        {
+           if (!Request.QueryString["goldvalue"].IsEmpty() && province.Value.revenue < Request.QueryString["goldvalue"].AsInt()) {continue;}
+           if (!Request.QueryString["starttime"].IsEmpty() && province.Value.prime_time < Request.QueryString["starttime"].AsInt()) {continue;}
+           if (!Request.QueryString["provinceStatus"].IsEmpty() && !Request.QueryString["provinceStatus"].Split(',').Contains(province.Value.status)) {continue;}
+
+
+
+           province.Value.arena = GetMapName(province.Value.arena);
+
+           newList.data.Add(province.Key, province.Value);
+        }
+
+        return newList;
     }
 
+    public static string GetMapName(string serverName)
+    {
+        return "";
+    }
+
+    public static Dictionary<int, string> GetClanNames(ProvinceList provinces)
+    {
+        return new Dictionary<int, string>();
+    }
+
+    public bool StatusSelected(string status)
+    {
+       if (Request.QueryString["provinceStatus"].IsEmpty()) return false;
+       return Request.QueryString["provinceStatus"].Split(',').Contains(status);
+    }
 }
 
 @{
     ProvinceList provinceList = GetProvinceList();
-    Province province = provinceList.data.Values.FirstOrDefault();
 
     int count = 0;
 
@@ -51,6 +82,7 @@
         count++;
     }
 }
+
 
 <!DOCTYPE html>
 
@@ -62,22 +94,61 @@
     </head>
     <body>
 
-        <form method="post">
+        <form method="get">
             <div>
+                Start Time: 
                 <select name="starttime">
-                    <option value="volvo">Volvo</option>
-                    <option value="saab">Saab</option>
-                    <option value="fiat">Fiat</option>
-                    <option value="audi">Audi</option>
+                    @{
+                        for (int i=16; i<20;++i)
+                        {
+                            if (@Request.QueryString["starttime"].AsInt() == i)
+                            {
+                                <option value=@i selected>@i+</option>
+                            }
+                            else
+                            {
+                                <option value=@i>@i+</option>
+                            }
+                        }
+                    }
                 </select>
-                <p><input type="submit" value="Submit" /></p>
+                <p>
+                Minimum Gold Value: 
+                <input name="goldvalue" value="@Request.QueryString["goldvalue"]"></input>
+                <p>
+                Province Status: <br>
+                @Html.CheckBox("provinceStatus", StatusSelected("start"), new Dictionary<string, object>{{"value", "start"}}) Landing <br>
+                @Html.CheckBox("provinceStatus", StatusSelected("mutiny"), new Dictionary<string, object>{{"value", "mutiny"}}) Revolt <br>
+                @Html.CheckBox("provinceStatus", StatusSelected("delayed_mutiny"), new Dictionary<string, object>{{"value", "delayed_mutiny"}}) Delayed Revolt <p>
+                    
+                <input type="submit" value="Submit" /></p>
             </div>
         </form>
 
-        <ol>
-            <li>Name: @province.province_i18n</li>
-        </ol>
-
-        @count
+        <table style="width:600px;text-align:center">
+            <tr>
+              <th>Name</th>
+              <th>Map</th> 
+              <th>Start Time</th>
+              <th>Max Tier</th>
+              <th>Gold Value</th>
+              <th>Current Holder</th>
+              <th>Status</th>
+            </tr>
+                @{
+                    foreach (var province in provinceList.data.Values)
+                    {
+                    <tr>
+                      <td><a href="http://worldoftanks.eu/clanwars/maps/globalmap/?province=@province.province_id">@province.province_i18n</a></td>
+                      <td>@province.arena</td> 
+                      <td>@province.prime_time</td>
+                      <td>@province.vehicle_max_level</td>
+                      <td>@province.revenue</td>
+                      <td><a href="http://wotcs.com/clan.php?wid=@province.clan_id">click</a></td>
+                      <td>@province.status</td>
+                    </tr>
+                    }
+                }
+        </table>
     </body>
 </html>
