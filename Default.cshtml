@@ -190,12 +190,12 @@
                     foreach (var province in provinceList.data.Values)
                     {
                     <tr>
-                      <td><a href="http://worldoftanks.eu/clanwars/maps/globalmap/?province=@province.province_id">@province.province_i18n</a></td>
+                      <td><a href="http://worldoftanks.eu/clanwars/maps/globalmap/?province=@province.province_id" target="_blank">@province.province_i18n</a></td>
                       <td>@province.arena</td> 
                       <td>@province.prime_time</td>
                       <td>@province.vehicle_max_level</td>
                       <td>@province.revenue</td>
-                      <td style="color: @province.clan.color"><a href="http://wotcs.com/clan.php?wid=@province.clan_id">@province.clan.abbreviation</a></td>
+                      <td style="color: @province.clan.color"><a href="http://wotcs.com/clan.php?wid=@province.clan_id" target="_blank">@province.clan.abbreviation</a></td>
                       <td>@province.status</td>
                     </tr>
                     }
