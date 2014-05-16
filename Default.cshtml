@@ -59,6 +59,7 @@
 
     string jsonText1 = "";
     string jsonText2 = "";
+    string missingClans = "";
 
     public ProvinceList GetProvinceList()
     {
@@ -74,6 +75,7 @@
         {
            if (!Request.QueryString["goldvalue"].IsEmpty() && province.Value.revenue < Request.QueryString["goldvalue"].AsInt()) {continue;}
            if (!Request.QueryString["starttime"].IsEmpty() && province.Value.prime_time < Request.QueryString["starttime"].AsInt()) {continue;}
+           if (!Request.QueryString["maxTier"].IsEmpty() && province.Value.vehicle_max_level > Request.QueryString["maxTier"].AsInt()) {continue;}
            if (!Request.QueryString["provinceStatus"].IsEmpty() && !Request.QueryString["provinceStatus"].Split(',').Contains(province.Value.status)) {continue;}
 
            province.Value.arena = GetMapName(province.Value.arena);
@@ -100,6 +102,8 @@
             }
             else
             {
+                missingClans += province.clan_id.HasValue ? province.clan_id.Value.ToString() : "dunno";
+                missingClans += ", ";
                 province.clan = new Clan();
             }
         }
@@ -172,6 +176,23 @@
                             else
                             {
                                 <option value=@i>@i+</option>
+                            }
+                        }
+                    }
+                </select>
+                <p>
+                Max Tier: 
+                <select name="maxTier">
+                    @{
+                        for (int i=10; i>5;i-=2)
+                        {
+                            if (@Request.QueryString["maxTier"].AsInt() == i)
+                            {
+                                <option value=@i selected>@i</option>
+                            }
+                            else
+                            {
+                                <option value=@i>@i</option>
                             }
                         }
                     }
