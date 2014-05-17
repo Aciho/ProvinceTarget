@@ -26,6 +26,7 @@
         public string primary_region { get; set; }
         public string province_id { get; set; }
         public int prime_time { get; set; }
+        public string display_time { get { return (prime_time+1).ToString()+":00"; }}
     }
 
     public class Region
@@ -77,6 +78,10 @@
            if (!Request.QueryString["starttime"].IsEmpty() && province.Value.prime_time < Request.QueryString["starttime"].AsInt()) {continue;}
            if (!Request.QueryString["maxTier"].IsEmpty() && province.Value.vehicle_max_level > Request.QueryString["maxTier"].AsInt()) {continue;}
            if (!Request.QueryString["provinceStatus"].IsEmpty() && !Request.QueryString["provinceStatus"].Split(',').Contains(province.Value.status)) {continue;}
+           if (MapBanned(province.Value.arena)) {continue;}
+
+           byte[] bytes = System.Text.Encoding.Default.GetBytes(province.Value.province_i18n);
+           province.Value.province_i18n = System.Text.Encoding.UTF8.GetString(bytes);
 
            province.Value.arena = GetMapName(province.Value.arena);
            
@@ -111,13 +116,55 @@
         return newList;
     }
 
+    static Dictionary<string,string> MapTranslate = new Dictionary<string,string>()
+    {
+        {"01_karelia","Karelia"},
+        {"02_malinovka","Malinovka"},
+        {"03_campania","Province"},
+        {"04_himmelsdorf","Himmelsdorf"},
+        {"05_prohorovka","Prohorovka"},
+        {"06_ensk","Ensk"},
+        {"07_lakeville","Lakeville"},
+        {"08_ruinberg","Ruinberg"},
+        {"10_hills","Mines"},
+        {"11_murovanka","Murovanka"},
+        {"13_erlenberg","Erlenberg"},
+        {"14_siegfried_line","Siegfried Line"},
+        {"Komarin","Komarin"},
+        {"17_munchen","Widepark"},
+        {"18_cliff","Cliff"},
+        {"19_monastery","Abbey"},
+        {"22_slough","Swamp"},
+        {"23_westfeld","Westfield"},
+        {"28_desert","Sand River"},
+        {"29_el_hallouf","El Halluf"},
+        {"31_airfield","Airfield"},
+        {"33_fjord","Fjords"},
+        {"34_redshire","Redshire"},
+        {"35_steppes","Steppes"},
+        {"36_fishing_bay","Fisherman's Bay"},
+        {"37_caucasus","Mountain Pass"},
+        {"38_mannerheim_line","Arctic Region"},
+        {"39_crimea","South Coast"},
+        {"42_north_america","Port"},
+        {"44_north_america","Live Oaks"},
+        {"45_north_america","Highway"},
+        {"47_canada_a","Serene Coast"},
+        {"51_asia","Dragon Ridge"},
+        {"53_japan","Hidden Village"},
+        {"60_asia_miao","Pearl River"},
+        {"73_asia_korea","Sacred Valley"},
+        {"85_winter","Severogorsk"},
+        {"86_himmelsdorf_winter","Himmelsdorf Winter"}
+    };
+
     public static string GetMapName(string serverName)
     {
-        switch (serverName)
+        if (MapTranslate.ContainsKey(serverName))
         {
-            default:
-                return serverName;
+            return MapTranslate[serverName];
         }
+        return serverName;
     }
 
     public static Dictionary<int, string> GetClanNames(ProvinceList provinces)
@@ -129,6 +176,12 @@
     {
        if (Request.QueryString["provinceStatus"].IsEmpty()) return false;
        return Request.QueryString["provinceStatus"].Split(',').Contains(status);
+    }
+
+    public bool MapBanned(string map)
+    {
+       if (Request.QueryString["mapRestrict"].IsEmpty()) return false;
+       return Request.QueryString["mapRestrict"].Split(',').Contains(map);
     }
 }
 
@@ -161,8 +214,10 @@
         <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
     </head>
     <body>
-
         <form method="get">
+        <table style="width:800px">
+            <tr><td>
+        
             <div>
                 Start Time: 
                 <select name="starttime">
@@ -207,10 +262,31 @@
                 @Html.CheckBox("provinceStatus", StatusSelected("delayed_mutiny"), new Dictionary<string, object>{{"value", "delayed_mutiny"}}) Delayed Revolt <p>
                     
                 <input type="submit" value="Submit" /></p>
-            </div>
-        </form>
-
-        <table style="width:600px;text-align:center">
+            </div></td>
+                
+            <td>
+                Banned Maps: <br>
+                @{
+                    int j = 0;
+                    foreach (var map in MapTranslate)
+                    {
+                        ++j;
+                        if (j>12)
+                        {
+                            j=0; 
+                            @Html.CheckBox("mapRestrict",MapBanned(map.Key), new Dictionary<string, object>{{"value", map.Key}}) @map.Value @Html.Raw("<br></td><td>")
+                        }
+                        else
+                        {
+                            @Html.CheckBox("mapRestrict",MapBanned(map.Key), new Dictionary<string, object>{{"value", map.Key}}) @map.Value <br>
+                        }
+                    }
+                }
+            </td>
+            </tr>
+        </table>
+            </form>
+        <table style="width:800px;text-align:center">
             <tr>
               <th>Name</th>
               <th>Map</th> 
@@ -226,7 +302,7 @@
                     <tr>
                       <td><a href="http://worldoftanks.eu/clanwars/maps/globalmap/?province=@province.province_id" target="_blank">@province.province_i18n</a></td>
                       <td>@province.arena</td> 
-                      <td>@province.prime_time</td>
+                      <td>@province.display_time</td>
                       <td>@province.vehicle_max_level</td>
                       <td>@province.revenue</td>
                         @if (province.clan_id == null)
